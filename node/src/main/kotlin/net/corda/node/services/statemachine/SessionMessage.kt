@@ -3,7 +3,9 @@ package net.corda.node.services.statemachine
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.PropagatedException
 import net.corda.core.utilities.UntrustworthyData
+import java.lang.reflect.Constructor
 
 interface SessionMessage
 
@@ -29,7 +31,15 @@ data class SessionData(override val recipientSessionId: Long, val payload: Any) 
     }
 }
 
-data class SessionEnd(override val recipientSessionId: Long) : ExistingSessionMessage
+data class SessionEnd(override val recipientSessionId: Long, val error: SessionError?) : ExistingSessionMessage
+
+data class SessionError(val exceptionType: Class<out PropagatedException>, val exceptionArgs: List<Any?>) {
+    fun toException(): PropagatedException {
+        @Suppress("UNCHECKED_CAST")
+        val constructor = exceptionType.constructors.single { it.parameterCount == exceptionArgs.size } as Constructor<out PropagatedException>
+        return constructor.newInstance(*exceptionArgs.toTypedArray())
+    }
+}
 
 data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)
 

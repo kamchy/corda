@@ -73,7 +73,8 @@ abstract class FlowLogic<out T> {
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
-    open fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any): UntrustworthyData<T> {
+    @Throws(PropagatedException::class)
+    open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
         return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow)
     }
 
@@ -94,7 +95,8 @@ abstract class FlowLogic<out T> {
      * corrupted data in order to exploit your code.
      */
     @Suspendable
-    open fun <T : Any> receive(receiveType: Class<T>, otherParty: Party): UntrustworthyData<T> {
+    @Throws(PropagatedException::class)
+    open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
         return stateMachine.receive(receiveType, otherParty, sessionFlow)
     }
 
@@ -121,6 +123,7 @@ abstract class FlowLogic<out T> {
     // TODO shareParentSessions is a bit too low-level and perhaps can be expresed in a better way
     @Suspendable
     @JvmOverloads
+    @Throws(PropagatedException::class)
     open fun <R> subFlow(subLogic: FlowLogic<R>, shareParentSessions: Boolean = false): R {
         subLogic.stateMachine = stateMachine
         maybeWireUpProgressTracking(subLogic)
@@ -149,6 +152,7 @@ abstract class FlowLogic<out T> {
      * helpful if this flow is meant to be used as a subflow.
      */
     @Suspendable
+    @Throws(PropagatedException::class)
     abstract fun call(): T
 
     /**
@@ -191,4 +195,12 @@ abstract class FlowLogic<out T> {
             ours.setChildProgressTracker(ours.currentStep, theirs)
         }
     }
+}
+
+/**
+ *
+ */
+abstract class PropagatedException(message: String) : Exception(message) {
+    // TODO Urgh! This is needed for serialisation
+    abstract fun toArgsList(): List<Any?>
 }
